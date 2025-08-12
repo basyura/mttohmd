@@ -1,6 +1,7 @@
 package converter
 
 import (
+	"html"
 	"regexp"
 	"strings"
 
@@ -19,6 +20,7 @@ var (
 	pTagCloseRegex        = regexp.MustCompile(`</p>`)
 	strongTagRegex        = regexp.MustCompile(`<(?:strong|b)[^>]*>(.*?)</(?:strong|b)>`)
 	emTagRegex            = regexp.MustCompile(`<(?:em|i)[^>]*>(.*?)</(?:em|i)>`)
+	codeTagRegex          = regexp.MustCompile(`<code[^>]*>(.*?)</code>`)
 	aTagRegex             = regexp.MustCompile(`<a[^>]+href=["']([^"']+)["'][^>]*>(.*?)</a>`)
 	imgWithAltRegex       = regexp.MustCompile(`<img[^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*/?>`)
 	imgAltSrcRegex        = regexp.MustCompile(`<img[^>]*alt=["']([^"']*)["'][^>]*src=["']([^"']+)["'][^>]*/?>`)
@@ -130,6 +132,14 @@ func convertHTMLToMarkdown(text string) string {
 
 	// <em> や <i> タグを斜体に変換
 	result = emTagRegex.ReplaceAllString(result, "*$1*")
+
+	// <code> タグを処理（HTMLエスケープを復元してバッククォートで囲む）
+	result = codeTagRegex.ReplaceAllStringFunc(result, func(match string) string {
+		content := codeTagRegex.ReplaceAllString(match, "$1")
+		// HTMLエスケープを復元
+		unescaped := html.UnescapeString(content)
+		return "`" + unescaped + "`"
+	})
 
 	// <a> タグをMarkdownリンクに変換
 	result = aTagRegex.ReplaceAllString(result, "[$2]($1)")

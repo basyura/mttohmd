@@ -16,7 +16,7 @@ func TestToMarkdown(t *testing.T) {
 		Status:   "Publish",
 		Date:     "01/15/2023 12:00:00 AM",
 		Category: "Technology, Go, Testing",
-		Body:     "これはテスト用の本文です。\n<strong>太字</strong>のテストも含まれます。",
+		Body:     "これはテスト用の本文です。\n<strong>太字</strong>と<code>&lt;C-Enter</code>のテストも含まれます。",
 		ImageURL: "https://example.com/test.jpg",
 	}
 
@@ -53,6 +53,9 @@ func TestToMarkdown(t *testing.T) {
 	}
 	if !strings.Contains(result, "**太字**") {
 		t.Error("Expected converted bold text not found")
+	}
+	if !strings.Contains(result, "`<C-Enter`") {
+		t.Error("Expected converted code text with unescaped HTML not found")
 	}
 
 	// 画像の確認
@@ -145,6 +148,26 @@ func TestConvertHTMLToMarkdown(t *testing.T) {
 			name:     "em と i タグ",
 			input:    "<em>斜体</em>と<i>イタリック</i>",
 			expected: "*斜体*と*イタリック*",
+		},
+		{
+			name:     "code タグ（HTMLエスケープなし）",
+			input:    "<code>console.log('hello')</code>",
+			expected: "`console.log('hello')`",
+		},
+		{
+			name:     "code タグ（HTMLエスケープあり）",
+			input:    "<code>&lt;C-Enter</code>",
+			expected: "`<C-Enter`",
+		},
+		{
+			name:     "code タグ（複雑なHTMLエスケープ）",
+			input:    "<code>&lt;div class=&quot;test&quot;&gt;content&lt;/div&gt;</code>",
+			expected: "`<div class=\"test\">content</div>`",
+		},
+		{
+			name:     "複数のcode タグ",
+			input:    "<code>&lt;C-j&gt;</code>と<code>&amp;lt;script&amp;gt;</code>",
+			expected: "`<C-j>`と`&lt;script&gt;`",
 		},
 		{
 			name:     "a タグ",
