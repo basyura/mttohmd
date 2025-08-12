@@ -1,11 +1,44 @@
 package converter
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
 	"mttohmd/entry"
+)
+
+var (
+	// ASIN詳細タグ用の正規表現
+	asinDetailWithPTagRegex = regexp.MustCompile(`(?s)<p><div class="hatena-asin-detail">.*?href="https://www\.amazon\.co\.jp/dp/([A-Z0-9]+)[^"]*".*?</div></div></p>`)
+	asinDetailNestedRegex   = regexp.MustCompile(`(?s)<div class="hatena-asin-detail">.*?href="https://www\.amazon\.co\.jp/dp/([A-Z0-9]+)[^"]*".*?</div></div>`)
+	asinDetailSimpleRegex   = regexp.MustCompile(`(?s)<div class="hatena-asin-detail">.*?href="https://www\.amazon\.co\.jp/dp/([A-Z0-9]+)[^"]*".*?</div>`)
+
+	// HTMLタグ変換用の正規表現
+	brTagRegex            = regexp.MustCompile(`<br\s*/?>|<BR\s*/?>`)
+	pTagOpenRegex         = regexp.MustCompile(`<p[^>]*>`)
+	pTagCloseRegex        = regexp.MustCompile(`</p>`)
+	strongTagRegex        = regexp.MustCompile(`<(?:strong|b)[^>]*>(.*?)</(?:strong|b)>`)
+	emTagRegex            = regexp.MustCompile(`<(?:em|i)[^>]*>(.*?)</(?:em|i)>`)
+	aTagRegex             = regexp.MustCompile(`<a[^>]+href=["']([^"']+)["'][^>]*>(.*?)</a>`)
+	imgWithAltRegex       = regexp.MustCompile(`<img[^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*/?>`)
+	imgAltSrcRegex        = regexp.MustCompile(`<img[^>]*alt=["']([^"']*)["'][^>]*src=["']([^"']+)["'][^>]*/?>`)
+	imgSimpleRegex        = regexp.MustCompile(`<img[^>]*src=["']([^"']+)["'][^>]*/?>`)
+	blockquoteRegex       = regexp.MustCompile(`(?s)<blockquote[^>]*>(.*?)</blockquote>`)
+	blockquoteInnerRegex  = regexp.MustCompile(`(?s)<blockquote[^>]*>(.*?)</blockquote>`)
+	ulOpenRegex           = regexp.MustCompile(`<ul[^>]*>`)
+	ulCloseRegex          = regexp.MustCompile(`</ul>`)
+	liTagRegex            = regexp.MustCompile(`<li[^>]*>(.*?)</li>`)
+	olOpenRegex           = regexp.MustCompile(`<ol[^>]*>`)
+	olCloseRegex          = regexp.MustCompile(`</ol>`)
+	newlineNormalizeRegex = regexp.MustCompile(`\n\n+`)
+
+	// ヘッダータグ用の正規表現
+	h1Regex = regexp.MustCompile(`<h1[^>]*>(.*?)</h1>`)
+	h2Regex = regexp.MustCompile(`<h2[^>]*>(.*?)</h2>`)
+	h3Regex = regexp.MustCompile(`<h3[^>]*>(.*?)</h3>`)
+	h4Regex = regexp.MustCompile(`<h4[^>]*>(.*?)</h4>`)
+	h5Regex = regexp.MustCompile(`<h5[^>]*>(.*?)</h5>`)
+	h6Regex = regexp.MustCompile(`<h6[^>]*>(.*?)</h6>`)
 )
 
 // ToMarkdown エントリーをHatena Blog形式のMarkdownに変換
@@ -70,7 +103,7 @@ func convertMTToMarkdown(body string) string {
 	result = convertHTMLToMarkdown(result)
 
 	// 空行の整理
-	result = regexp.MustCompile(`\n\n+`).ReplaceAllString(result, "\n\n")
+	result = newlineNormalizeRegex.ReplaceAllString(result, "\n\n")
 	result = strings.TrimSpace(result)
 
 	return result
@@ -80,39 +113,43 @@ func convertMTToMarkdown(body string) string {
 func convertHTMLToMarkdown(text string) string {
 	result := text
 
+	// はてなブログのASIN詳細タグを変換（他の変換の前に実行）
+	result = asinDetailWithPTagRegex.ReplaceAllString(result, "[asin:$1:detail]")
+	result = asinDetailNestedRegex.ReplaceAllString(result, "[asin:$1:detail]")
+	result = asinDetailSimpleRegex.ReplaceAllString(result, "[asin:$1:detail]")
+
 	// <br> タグを改行に変換
-	result = regexp.MustCompile(`<br\s*/?>|<BR\s*/?>`).ReplaceAllString(result, "\n")
+	result = brTagRegex.ReplaceAllString(result, "\n")
 
 	// <p> タグを段落に変換
-	result = regexp.MustCompile(`<p[^>]*>`).ReplaceAllString(result, "")
-	result = regexp.MustCompile(`</p>`).ReplaceAllString(result, "\n\n")
+	result = pTagOpenRegex.ReplaceAllString(result, "")
+	result = pTagCloseRegex.ReplaceAllString(result, "\n\n")
 
 	// <strong> や <b> タグを太字に変換
-	result = regexp.MustCompile(`<(?:strong|b)[^>]*>(.*?)</(?:strong|b)>`).ReplaceAllString(result, "**$1**")
+	result = strongTagRegex.ReplaceAllString(result, "**$1**")
 
 	// <em> や <i> タグを斜体に変換
-	result = regexp.MustCompile(`<(?:em|i)[^>]*>(.*?)</(?:em|i)>`).ReplaceAllString(result, "*$1*")
+	result = emTagRegex.ReplaceAllString(result, "*$1*")
 
 	// <a> タグをMarkdownリンクに変換
-	result = regexp.MustCompile(`<a[^>]+href=["']([^"']+)["'][^>]*>(.*?)</a>`).ReplaceAllString(result, "[$2]($1)")
+	result = aTagRegex.ReplaceAllString(result, "[$2]($1)")
 
 	// <img> タグをMarkdown画像に変換
-	result = regexp.MustCompile(`<img[^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*/?>`).ReplaceAllString(result, "![$2]($1)")
-	result = regexp.MustCompile(`<img[^>]*alt=["']([^"']*)["'][^>]*src=["']([^"']+)["'][^>]*/?>`).ReplaceAllString(result, "![$1]($2)")
-	result = regexp.MustCompile(`<img[^>]*src=["']([^"']+)["'][^>]*/?>`).ReplaceAllString(result, "![]($1)")
+	result = imgWithAltRegex.ReplaceAllString(result, "![$2]($1)")
+	result = imgAltSrcRegex.ReplaceAllString(result, "![$1]($2)")
+	result = imgSimpleRegex.ReplaceAllString(result, "![]($1)")
 
 	// <h1> から <h6> タグをMarkdownヘッダーに変換
-	for i := 1; i <= 6; i++ {
-		headerTag := fmt.Sprintf("h%d", i)
-		headerMark := strings.Repeat("#", i)
-		pattern := fmt.Sprintf(`<%s[^>]*>(.*?)</%s>`, headerTag, headerTag)
-		replacement := fmt.Sprintf("%s $1", headerMark)
-		result = regexp.MustCompile(pattern).ReplaceAllString(result, replacement)
-	}
+	result = h1Regex.ReplaceAllString(result, "# $1")
+	result = h2Regex.ReplaceAllString(result, "## $1")
+	result = h3Regex.ReplaceAllString(result, "### $1")
+	result = h4Regex.ReplaceAllString(result, "#### $1")
+	result = h5Regex.ReplaceAllString(result, "##### $1")
+	result = h6Regex.ReplaceAllString(result, "###### $1")
 
 	// <blockquote> タグを引用に変換
-	result = regexp.MustCompile(`(?s)<blockquote[^>]*>(.*?)</blockquote>`).ReplaceAllStringFunc(result, func(match string) string {
-		content := regexp.MustCompile(`(?s)<blockquote[^>]*>(.*?)</blockquote>`).ReplaceAllString(match, "$1")
+	result = blockquoteRegex.ReplaceAllStringFunc(result, func(match string) string {
+		content := blockquoteInnerRegex.ReplaceAllString(match, "$1")
 		lines := strings.Split(strings.TrimSpace(content), "\n")
 		var quotedLines []string
 		for _, line := range lines {
@@ -122,13 +159,13 @@ func convertHTMLToMarkdown(text string) string {
 	})
 
 	// <ul> と <li> タグをMarkdownリストに変換
-	result = regexp.MustCompile(`<ul[^>]*>`).ReplaceAllString(result, "")
-	result = regexp.MustCompile(`</ul>`).ReplaceAllString(result, "\n")
-	result = regexp.MustCompile(`<li[^>]*>(.*?)</li>`).ReplaceAllString(result, "- $1")
+	result = ulOpenRegex.ReplaceAllString(result, "")
+	result = ulCloseRegex.ReplaceAllString(result, "\n")
+	result = liTagRegex.ReplaceAllString(result, "- $1")
 
 	// <ol> タグを番号付きリストに変換（簡易版）
-	result = regexp.MustCompile(`<ol[^>]*>`).ReplaceAllString(result, "")
-	result = regexp.MustCompile(`</ol>`).ReplaceAllString(result, "\n")
+	result = olOpenRegex.ReplaceAllString(result, "")
+	result = olCloseRegex.ReplaceAllString(result, "\n")
 
 	return result
 }

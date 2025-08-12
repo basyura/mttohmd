@@ -197,3 +197,66 @@ func TestConvertHTMLToMarkdownComplexBlockquote(t *testing.T) {
 		t.Errorf("convertHTMLToMarkdown() = %q, want %q", result, expected)
 	}
 }
+
+func TestConvertHTMLToMarkdownHatenaASIN(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name: "基本的なASIN詳細タグ",
+			input: `<div class="hatena-asin-detail">
+<a href="https://www.amazon.co.jp/dp/B0B88B2L48">商品タイトル</a>
+</div>`,
+			expected: "[asin:B0B88B2L48:detail]",
+		},
+		{
+			name: "複雑なASIN詳細タグ",
+			input: `<div class="hatena-asin-detail">
+<p>商品説明</p>
+<a href="https://www.amazon.co.jp/dp/B0C123XYZ9?ref=test">
+<img src="image.jpg" alt="商品画像">
+商品タイトル
+</a>
+<p>その他情報</p>
+</div>`,
+			expected: "[asin:B0C123XYZ9:detail]",
+		},
+		{
+			name: "複数のASIN詳細タグ",
+			input: `テキスト
+<div class="hatena-asin-detail">
+<a href="https://www.amazon.co.jp/dp/B0A1B2C3D4">商品1</a>
+</div>
+別のテキスト
+<div class="hatena-asin-detail">
+<a href="https://www.amazon.co.jp/dp/B0X9Y8Z7W6">商品2</a>
+</div>`,
+			expected: "テキスト\n[asin:B0A1B2C3D4:detail]\n別のテキスト\n[asin:B0X9Y8Z7W6:detail]",
+		},
+		{
+			name:     "pタグで囲まれたASIN詳細タグ",
+			input:    `<p><div class="hatena-asin-detail"><a href="https://www.amazon.co.jp/dp/B0B88B2L48?tag=basyura-22&amp;linkCode=osi&amp;th=1&amp;psc=1" class="hatena-asin-detail-image-link" target="_blank" rel="sponsored noopener"><img src="https://m.media-amazon.com/images/I/41x2dNHHksL._SL500_.jpg" class="hatena-asin-detail-image" alt="タクティクスオウガ リボーン"></a><div class="hatena-asin-detail-info"><p class="hatena-asin-detail-title"><a href="https://www.amazon.co.jp/dp/B0B88B2L48?tag=basyura-22&amp;linkCode=osi&amp;th=1&amp;psc=1" target="_blank" rel="sponsored noopener">タクティクスオウガ リボーン</a></p></div></div></p>`,
+			expected: "[asin:B0B88B2L48:detail]",
+		},
+		{
+			name: "ASIN詳細タグではないdiv",
+			input: `<div class="other-class">
+<a href="https://www.amazon.co.jp/dp/B0TEST123">商品</a>
+</div>`,
+			expected: `<div class="other-class">
+[商品](https://www.amazon.co.jp/dp/B0TEST123)
+</div>`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := convertHTMLToMarkdown(tt.input)
+			if result != tt.expected {
+				t.Errorf("convertHTMLToMarkdown() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
