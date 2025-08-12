@@ -21,6 +21,7 @@ var (
 	strongTagRegex        = regexp.MustCompile(`<(?:strong|b)[^>]*>(.*?)</(?:strong|b)>`)
 	emTagRegex            = regexp.MustCompile(`<(?:em|i)[^>]*>(.*?)</(?:em|i)>`)
 	codeTagRegex          = regexp.MustCompile(`<code[^>]*>(.*?)</code>`)
+	spanItemscopeRegex    = regexp.MustCompile(`<span[^>]*itemscope[^>]*itemtype="http://schema\.org/Photograph"[^>]*>(.*?)</span>`)
 	aTagRegex             = regexp.MustCompile(`<a[^>]+href=["']([^"']+)["'][^>]*>(.*?)</a>`)
 	imgWithAltRegex       = regexp.MustCompile(`<img[^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*/?>`)
 	imgAltSrcRegex        = regexp.MustCompile(`<img[^>]*alt=["']([^"']*)["'][^>]*src=["']([^"']+)["'][^>]*/?>`)
@@ -140,6 +141,9 @@ func convertHTMLToMarkdown(text string) string {
 		unescaped := html.UnescapeString(content)
 		return "`" + unescaped + "`"
 	})
+
+	// <span itemscope itemtype="http://schema.org/Photograph"> タグを削除（タグと内容を完全に削除）
+	result = spanItemscopeRegex.ReplaceAllString(result, "")
 
 	// <a> タグをMarkdownリンクに変換
 	result = aTagRegex.ReplaceAllString(result, "[$2]($1)")

@@ -170,6 +170,31 @@ func TestConvertHTMLToMarkdown(t *testing.T) {
 			expected: "`<C-j>`と`&lt;script&gt;`",
 		},
 		{
+			name:     "span itemscope タグ（基本）",
+			input:    `<span itemscope itemtype="http://schema.org/Photograph">画像内容</span>`,
+			expected: "",
+		},
+		{
+			name:     "span itemscope タグ（複雑な属性）",
+			input:    `<span class="photo" itemscope itemtype="http://schema.org/Photograph" data-test="value">画像テキスト</span>`,
+			expected: "",
+		},
+		{
+			name:     "span itemscope タグ（複数）",
+			input:    `テキスト<span itemscope itemtype="http://schema.org/Photograph">写真1</span>と<span itemscope itemtype="http://schema.org/Photograph">写真2</span>`,
+			expected: "テキストと",
+		},
+		{
+			name:     "span itemscope タグ（ネスト構造）",
+			input:    `<span itemscope itemtype="http://schema.org/Photograph"><strong>重要な</strong>写真</span>`,
+			expected: "",
+		},
+		{
+			name:     "通常のspan タグ",
+			input:    `<span class="normal">通常のspan</span>`,
+			expected: `<span class="normal">通常のspan</span>`,
+		},
+		{
 			name:     "a タグ",
 			input:    "<a href=\"https://example.com\">リンク</a>",
 			expected: "[リンク](https://example.com)",
