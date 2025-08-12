@@ -1,5 +1,6 @@
 blog.basyura.org.export.txt
 mttohmd
 *.exe
-entries
 .serena/cache
+mds
+mts
