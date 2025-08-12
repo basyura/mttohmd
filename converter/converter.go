@@ -97,7 +97,9 @@ func convertHTMLToMarkdown(text string) string {
 	result = regexp.MustCompile(`<a[^>]+href=["']([^"']+)["'][^>]*>(.*?)</a>`).ReplaceAllString(result, "[$2]($1)")
 
 	// <img> タグをMarkdown画像に変換
-	result = regexp.MustCompile(`<img[^>]+src=["']([^"']+)["'][^>]*(?:alt=["']([^"']*)["'][^>]*)?/?>`).ReplaceAllString(result, "![$2]($1)")
+	result = regexp.MustCompile(`<img[^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*/?>`).ReplaceAllString(result, "![$2]($1)")
+	result = regexp.MustCompile(`<img[^>]*alt=["']([^"']*)["'][^>]*src=["']([^"']+)["'][^>]*/?>`).ReplaceAllString(result, "![$1]($2)")
+	result = regexp.MustCompile(`<img[^>]*src=["']([^"']+)["'][^>]*/?>`).ReplaceAllString(result, "![]($1)")
 
 	// <h1> から <h6> タグをMarkdownヘッダーに変換
 	for i := 1; i <= 6; i++ {
@@ -109,8 +111,8 @@ func convertHTMLToMarkdown(text string) string {
 	}
 
 	// <blockquote> タグを引用に変換
-	result = regexp.MustCompile(`<blockquote[^>]*>(.*?)</blockquote>`).ReplaceAllStringFunc(result, func(match string) string {
-		content := regexp.MustCompile(`<blockquote[^>]*>(.*?)</blockquote>`).ReplaceAllString(match, "$1")
+	result = regexp.MustCompile(`(?s)<blockquote[^>]*>(.*?)</blockquote>`).ReplaceAllStringFunc(result, func(match string) string {
+		content := regexp.MustCompile(`(?s)<blockquote[^>]*>(.*?)</blockquote>`).ReplaceAllString(match, "$1")
 		lines := strings.Split(strings.TrimSpace(content), "\n")
 		var quotedLines []string
 		for _, line := range lines {

@@ -46,52 +46,52 @@ func GenerateFilename(e entry.Entry) string {
 // GenerateMTContent エントリーをMovableType形式のまま出力
 func GenerateMTContent(e entry.Entry) string {
 	var mt strings.Builder
-	
+
 	// MovableType形式のヘッダー
 	if e.Author != "" {
 		mt.WriteString("AUTHOR: ")
 		mt.WriteString(e.Author)
 		mt.WriteString("\n")
 	}
-	
+
 	mt.WriteString("TITLE: ")
 	mt.WriteString(e.Title)
 	mt.WriteString("\n")
-	
+
 	if e.Basename != "" {
 		mt.WriteString("BASENAME: ")
 		mt.WriteString(e.Basename)
 		mt.WriteString("\n")
 	}
-	
+
 	if e.Status != "" {
 		mt.WriteString("STATUS: ")
 		mt.WriteString(e.Status)
 		mt.WriteString("\n")
 	}
-	
+
 	if e.Date != "" {
 		mt.WriteString("DATE: ")
 		mt.WriteString(e.Date)
 		mt.WriteString("\n")
 	}
-	
+
 	if e.Category != "" {
 		mt.WriteString("CATEGORY: ")
 		mt.WriteString(e.Category)
 		mt.WriteString("\n")
 	}
-	
+
 	if e.ImageURL != "" {
 		mt.WriteString("IMAGE: ")
 		mt.WriteString(e.ImageURL)
 		mt.WriteString("\n")
 	}
-	
+
 	mt.WriteString("-----\n")
 	mt.WriteString("BODY:\n")
 	mt.WriteString(e.Body)
 	mt.WriteString("\n-----\n")
-	
+
 	return mt.String()
 }
